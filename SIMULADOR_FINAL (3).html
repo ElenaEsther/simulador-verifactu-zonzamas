@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Facturación VeriFactu - CIFP Zonzamas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @media print { .no-print { display: none !important; } }
+        .watermark { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%) rotate(-45deg); 
+            font-size: 100px; 
+            color: rgba(200,0,0,0.08); 
+            font-weight: bold; 
+            z-index: 0; 
+            pointer-events: none;
+            width: 200%;
+            text-align: center;
+            line-height: 1.2;
+            display: none;
+        }
+        @media print { 
+            .watermark { 
+                display: block !important;
+                color: rgba(200,0,0,0.1) !important;
+            } 
+        }
+        body { position: relative; }
+        #app { position: relative; z-index: 1; }
+        .btn-card { transition: all 0.3s ease; cursor: pointer; }
+        .btn-card:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="watermark">DOCUMENTO EDUCATIVO - CIFP ZONZAMAS - SIN VALIDEZ FISCAL</div>
+    <div id="app"></div>
+
+    <script>
+        const APP = {
+            tab: 'inicio',
+            empresa: {
+                nombre: "TechStore SL",
+                cif: "B12345678",
+                direccion: "Calle Principal 42",
+                ciudad: "Las Palmas",
+                cp: "35001",
+                provincia: "Las Palmas",
+                telefono: "928123456",
+                email: "info@techstore.es"
+            },
+            proveedores: [
+                {
+                    id: 1,
+                    codigo: "PROV0001",
+                    nombre: "Electrodomésticos Galaxy",
+                    cif: "A87654321",
+                    direccion: "Av. Industrial 15",
+                    ciudad: "Santa Cruz",
+                    telefono: "922654321",
+                    email: "ventas@galaxy.es"
+                }
+            ],
+            facturasCompra: [
+                {
+                    id: 1,
+                    numero: "OC-2025-001",
+                    fecha: "2025-11-08",
+                    proveedor: { id: 1, codigo: "PROV0001", nombre: "Electrodomésticos Galaxy", cif: "A87654321", direccion: "Av. Industrial 15", ciudad: "Santa Cruz", telefono: "922654321", email: "ventas@galaxy.es" },
+                    lineas: [
+                        { codigo: "LAP001", nombre: "Laptop Dell XPS 13", cantidad: 5, precioCompra: 800, precioVenta: 1100, igic: 7, stockMin: 3 },
+                        { codigo: "MON001", nombre: "Monitor Samsung 27\"", cantidad: 3, precioCompra: 250, precioVenta: 350, igic: 7, stockMin: 2 }
+                    ],
+                    total: 5550
+                }
+            ],
+            productos: [
+                { id: 1, codigo: "LAP001", nombre: "Laptop Dell XPS 13", precioCompra: 800, precioVenta: 1100, igic: 7, stockMin: 3, stock: 5, proveedor: 1 },
+                { id: 2, codigo: "MON001", nombre: "Monitor Samsung 27\"", precioCompra: 250, precioVenta: 350, igic: 7, stockMin: 2, stock: 3, proveedor: 1 }
+            ],
+            clientes: [
+                {
+                    id: 1,
+                    codigo: "CLI0001",
+                    nombre: "Empresa ABC Solutions",
+                    cif: "C98765432",
+                    direccion: "Calle Comercial 88",
+                    ciudad: "Las Palmas",
+                    telefono: "928333333",
+                    email: "compras@abcsolutions.es",
+                    descComercial: 5,
+                    descVolumen: 3,
+                    prontoPago: 2
+                }
+            ],
+            albaranes: [
+                {
+                    id: 1,
+                    numero: "ALB0001",
+                    fecha: "2025-11-08",
+                    cliente: { id: 1, codigo: "CLI0001", nombre: "Empresa ABC Solutions", cif: "C98765432", direccion: "Calle Comercial 88", ciudad: "Las Palmas", telefono: "928333333", email: "compras@abcsolutions.es", descComercial: 5, descVolumen: 3, prontoPago: 2 },
+                    lineas: [
+                        { id: 1, producto: { id: 1, codigo: "LAP001", nombre: "Laptop Dell XPS 13", precioCompra: 800, precioVenta: 1100, igic: 7, stockMin: 3, stock: 4, proveedor: 1 }, cantidad: 1 }
+                    ],
+                    facturado: false
+                }
+            ],
+            facturas: [
+                {
+                    id: 1,
+                    numero: "1",
+                    serie: "2025-A",
+                    fecha: "2025-11-08",
+                    cliente: { id: 1, codigo: "CLI0001", nombre: "Empresa ABC Solutions", cif: "C98765432", direccion: "Calle Comercial 88", ciudad: "Las Palmas", telefono: "928333333", email: "compras@abcsolutions.es", descComercial: 5, descVolumen: 3, prontoPago: 2 },
+                    lineas: [
+                        { id: 1, producto: { id: 1, codigo: "LAP001", nombre: "Laptop Dell XPS 13", precioCompra: 800, precioVenta: 1100, igic: 7, stockMin: 3, stock: 4, proveedor: 1 }, cantidad: 1, precio: 1100, igic: 7 }
+                    ],
+                    base: 1069.18,
+                    igic: 74.84,
+                    total: 1144.02,
+                    hashAnterior: "0000000000000000",
+                    estado: "Validada AEAT",
+                    huella: "a1b2c3d4e5f6g7h8",
+                    firma: "f8g7h6e5d4c3b2a1",
+                    urlQR: window.location.href.split('?')[0] + "?factura=1",
+                    qr: window.location.href.split('?')[0] + "?factura=1",
+                    csv: "CSV-EDU-ABC12345"
+                }
+            ],
+            rectificativas: [
+                {
+                    id: 2,
+                    numero: "1",
+                    serie: "2025-R",
+                    fecha: "2025-11-08",
+                    cliente: { id: 1, codigo: "CLI0001", nombre: "Empresa ABC Solutions", cif: "C98765432", direccion: "Calle Comercial 88", ciudad: "Las Palmas", telefono: "928333333", email: "compras@abcsolutions.es", descComercial: 5, descVolumen: 3, prontoPago: 2 },
+                    facturaOriginal: { numero: "1", serie: "2025-A", fecha: "2025-11-08" },
+                    motivo: "Devolución parcial",
+                    lineas: [
+                        { id: 2, producto: { id: 2, codigo: "MON001", nombre: "Monitor Samsung 27\"", precioCompra: 250, precioVenta: 350, igic: 7, stockMin: 2, stock: 2, proveedor: 1 }, cantidad: 1, precio: 350, igic: 7 }
+                    ],
+                    base: -339.25,
+                    igic: -23.75,
+                    total: -363.00,
+                    hashAnterior: "a1b2c3d4e5f6g7h8",
+                    estado: "Validada AEAT",
+                    huella: "b2c3d4e5f6g7h8i9",
+                    firma: "i9h8g7f6e5d4c3b2",
+                    urlQR: window.location.href.split('?')[0] + "?factura=2",
+                    qr: window.location.href.split('?')[0] + "?factura=2",
+                    csv: "CSV-RECT-XYZ78901"
+                }
+            ],
+            cert: {
+                serie: "CERT-EDU-DEMO2025",
+                titular: "TechStore SL",
+                cif: "B12345678",
+                emisor: "CIFP Zonzamas",
+                desde: "2025-01-01",
+                hasta: "2026-12-31"
+            },
+            modal: null,
+            vistaFactura: null,
+            lineasTemp: []
+        };
+
+        function codigo(pref, arr) { return pref + String(arr.length + 1).padStart(4, '0'); }
+        function hash(d) { const s = JSON.stringify(d); let h = 0; for(let i=0; i<s.length; i++) h = ((h<<5)-h) + s.charCodeAt(i); return Math.abs(h&h).toString(16).padStart(16,'0').substring(0,16); }
+        function genCert() { if(!APP.empresa) return; APP.cert = { serie: 'CERT-EDU-'+Math.random().toString(36).slice(2,10).toUpperCase(), titular: APP.empresa.nombre, cif: APP.empresa.cif, emisor: 'CIFP Zonzamas', desde: '2025-01-01', hasta: '2026-12-31' }; }
+        
+        function cambiarTab(t) { APP.tab = t; render(); }
+        function abrirModal(tipo) { APP.modal = tipo; APP.lineasTemp = []; render(); }
+        function cerrarModal() { APP.modal = null; APP.lineasTemp = []; render(); }
+
+        function guardarEmpresa(e) {
+            e.preventDefault();
+            const f = e.target;
+            APP.empresa = { nombre: f.nombre.value, cif: f.cif.value, direccion: f.direccion.value, ciudad: f.ciudad.value, cp: f.cp.value, provincia: f.provincia.value, telefono: f.telefono.value, email: f.email.value };
+            genCert();
+            cerrarModal();
+            alert('✅ Empresa configurada');
+            render();
+        }
+
+        function guardarProveedor(e) {
+            e.preventDefault();
+            const f = e.target;
+            APP.proveedores.push({ id: Date.now(), codigo: codigo('PROV', APP.proveedores), nombre: f.nombre.value, cif: f.cif.value, direccion: f.direccion.value, ciudad: f.ciudad.value, telefono: f.telefono.value, email: f.email.value });
+            cerrarModal();
+            alert('✅ Proveedor registrado');
+            render();
+        }
+
+        function addLineaCompra() {
+            const codigoP = document.getElementById('lineaCodigo').value.trim();
+            const nombre = document.getElementById('lineaNombre').value.trim();
+            const cantidad = parseFloat(document.getElementById('lineaCantidad').value);
+            const precioCompra = parseFloat(document.getElementById('lineaPrecioCompra').value);
+            const precioVenta = parseFloat(document.getElementById('lineaPrecioVenta').value);
+            const igic = parseFloat(document.getElementById('lineaIgic').value) || 0;
+            const stockMin = parseInt(document.getElementById('lineaStockMin').value) || 5;
+
+            if (!codigoP || !nombre || isNaN(cantidad) || isNaN(precioCompra)) {
+                alert('⚠️ Completa los campos obligatorios');
+                return;
+            }
+
+            APP.lineasTemp.push({ codigo: codigoP, nombre, cantidad, precioCompra, precioVenta, igic, stockMin });
+            document.getElementById('lineaCodigo').value = '';
+            document.getElementById('lineaNombre').value = '';
+            document.getElementById('lineaPrecioCompra').value = '';
+            document.getElementById('lineaPrecioVenta').value = '';
+            document.getElementById('lineaCantidad').value = '1';
+            document.getElementById('lineaStockMin').value = '5';
+            render();
+        }
+
+        function delLineaCompra(idx) {
+            APP.lineasTemp.splice(idx, 1);
+            render();
+        }
+
+        function guardarFacturaCompra(e) {
+            e.preventDefault();
+            const f = e.target;
+            const prov = APP.proveedores.find(p => p.id == f.proveedor.value);
+            if(!prov) { alert('⚠️ Selecciona un proveedor'); return; }
+            if(!APP.lineasTemp.length) { alert('⚠️ Añade al menos un producto'); return; }
+            
+            const fc = { id: Date.now(), numero: f.numero.value, fecha: f.fecha.value, proveedor: prov, lineas: [...APP.lineasTemp], total: APP.lineasTemp.reduce((s,l) => s + (l.cantidad * l.precioCompra * (1+l.igic/100)), 0) };
+            
+            APP.lineasTemp.forEach((lin, idx) => {
+                const existe = APP.productos.find(p => p.codigo === lin.codigo && p.nombre === lin.nombre);
+                if(existe) { 
+                    existe.stock += lin.cantidad; 
+                } 
+                else { 
+                    APP.productos.push({ 
+                        id: Date.now() + idx, 
+                        codigo: lin.codigo,
+                        nombre: lin.nombre,
+                        precioCompra: lin.precioCompra,
+                        precioVenta: lin.precioVenta,
+                        igic: lin.igic,
+                        stockMin: lin.stockMin,
+                        stock: lin.cantidad, 
+                        proveedor: prov.id 
+                    }); 
+                }
+            });
+            APP.facturasCompra.push(fc);
+            APP.lineasTemp = [];
+            cerrarModal();
+            alert('✅ Factura de compra registrada');
+            render();
+        }
+
+        function guardarCliente(e) {
+            e.preventDefault();
+            const f = e.target;
+            APP.clientes.push({ id: Date.now(), codigo: codigo('CLI', APP.clientes), nombre: f.nombre.value, cif: f.cif.value, direccion: f.direccion.value, ciudad: f.ciudad.value, telefono: f.telefono.value, email: f.email.value, descComercial: parseFloat(f.descComercial.value)||0, descVolumen: parseFloat(f.descVolumen.value)||0, prontoPago: parseFloat(f.prontoPago.value)||0 });
+            cerrarModal();
+            alert('✅ Cliente registrado');
+            render();
+        }
+
+        function addLineaAlbaran() {
+            const sel = document.getElementById('selProdAlbaran');
+            const cant = parseFloat(document.getElementById('cantAlbaran').value);
+            if(!sel.value || isNaN(cant)) { alert('Selecciona producto y cantidad'); return; }
+            const prod = APP.productos.find(p => p.id == sel.value);
+            if(!prod) { alert('Producto no encontrado'); return; }
+            if(prod.stock < cant) { alert('Stock insuficiente'); return; }
+            APP.lineasTemp.push({ id: Date.now(), producto: prod, cantidad: cant });
+            sel.value = ''; 
+            document.getElementById('cantAlbaran').value = '1';
+            render();
+        }
+
+        function delLineaAlbaran(id) { 
+            APP.lineasTemp = APP.lineasTemp.filter(l => l.id !== id); 
+            render(); 
+        }
+
+        function guardarAlbaran(e) {
+            e.preventDefault();
+            if(!APP.lineasTemp.length) { alert('Añade productos'); return; }
+            const f = e.target;
+            const cli = APP.clientes.find(c => c.id == f.cliente.value);
+            if(!cli) { alert('Selecciona cliente'); return; }
+            const alb = { id: Date.now(), numero: codigo('ALB', APP.albaranes), fecha: f.fecha.value, cliente: cli, lineas: [...APP.lineasTemp], facturado: false };
+            APP.lineasTemp.forEach(lin => { 
+                const p = APP.productos.find(x => x.id == lin.producto.id); 
+                if(p) p.stock -= lin.cantidad; 
+            });
+            APP.albaranes.push(alb);
+            APP.lineasTemp = [];
+            cerrarModal();
+            alert('✅ Albarán creado');
+            render();
+        }
+
+        function addLineaFactura() {
+            const sel = document.getElementById('selProdFactura');
+            const cant = parseFloat(document.getElementById('cantFactura').value);
+            if(!sel.value || isNaN(cant)) { alert('Selecciona producto y cantidad'); return; }
+            const prod = APP.productos.find(p => p.id == sel.value);
+            if(!prod) { alert('Producto no encontrado'); return; }
+            if(prod.stock < cant) { alert('Stock insuficiente'); return; }
+            APP.lineasTemp.push({ id: Date.now(), producto: prod, cantidad: cant, precio: prod.precioVenta, igic: prod.igic });
+            sel.value = ''; 
+            document.getElementById('cantFactura').value = '1';
+            render();
+        }
+
+        function delLineaFactura(id) { 
+            APP.lineasTemp = APP.lineasTemp.filter(l => l.id !== id); 
+            render(); 
+        }
+
+        function addLineaRectificativa() {
+            const sel = document.getElementById('selProdRect');
+            const cant = parseFloat(document.getElementById('cantRect').value);
+            if(!sel.value || isNaN(cant)) { alert('Selecciona producto y cantidad'); return; }
+            const prod = APP.productos.find(p => p.id == sel.value);
+            if(!prod) { alert('Producto no encontrado'); return; }
+            APP.lineasTemp.push({ id: Date.now(), producto: prod, cantidad: cant, precio: prod.precioVenta, igic: prod.igic });
+            sel.value = ''; 
+            document.getElementById('cantRect').value = '1';
+            render();
+        }
+
+        function guardarFactura(e) {
+            e.preventDefault();
+            if(!APP.lineasTemp.length) { alert('Añade productos'); return; }
+            const f = e.target;
+            const cli = APP.clientes.find(c => c.id == f.cliente.value);
+            if(!cli) { alert('Selecciona cliente'); return; }
+            const hashAnt = APP.facturas.length ? APP.facturas[APP.facturas.length-1].huella : '0'.repeat(16);
+            
+            let base=0, igicT=0;
+            APP.lineasTemp.forEach(lin => {
+                const desc=(cli.descComercial+cli.descVolumen+cli.prontoPago)/100;
+                const pf=lin.precio*(1-desc);
+                const sub=pf*lin.cantidad;
+                base += sub;
+                igicT += sub*(lin.igic/100);
+            });
+
+            const fac = { 
+                id: Date.now(), 
+                numero: f.numero.value, 
+                serie: f.serie.value, 
+                fecha: f.fecha.value, 
+                cliente: cli, 
+                lineas: [...APP.lineasTemp], 
+                base, 
+                igic: igicT, 
+                total: base+igicT, 
+                hashAnterior: hashAnt, 
+                estado: 'Procesando' 
+            };
+            
+            fac.huella = hash({ cif: APP.empresa.cif, num: fac.serie+fac.numero, fecha: fac.fecha, total: fac.total, prev: hashAnt });
+            fac.firma = hash(fac.huella + APP.cert.serie);
+            fac.urlQR = `${window.location.href.split('?')[0]}?factura=${fac.id}`;
+            fac.qr = fac.urlQR;
+            fac.csv = 'CSV-EDU-' + Math.random().toString(36).slice(2,10).toUpperCase();
+
+            APP.lineasTemp.forEach(lin => { 
+                const p = APP.productos.find(x => x.id === lin.producto.id); 
+                if(p) p.stock -= lin.cantidad; 
+            });
+
+            APP.facturas.push(fac);
+            APP.lineasTemp = [];
+            cerrarModal();
+            alert('✅ Factura creada');
+
+            setTimeout(() => {
+                fac.estado = 'Validada AEAT';
+                render();
+            }, 1200);
+        }
+
+        function guardarRectificativa(e) {
+            e.preventDefault();
+            const f = e.target;
+            const facturaOrig = APP.facturas.find(fac => fac.id == f.facturaOriginal.value);
+            if(!facturaOrig) { alert('Selecciona factura a rectificar'); return; }
+            if(!APP.lineasTemp.length) { alert('Añade líneas de rectificación'); return; }
+
+            let base=0, igicT=0;
+            APP.lineasTemp.forEach(lin => {
+                const desc=(facturaOrig.cliente.descComercial+facturaOrig.cliente.descVolumen+facturaOrig.cliente.prontoPago)/100;
+                const pf=lin.precio*(1-desc);
+                const sub=pf*lin.cantidad;
+                base += sub;
+                igicT += sub*(lin.igic/100);
+            });
+
+            const rect = {
+                id: Date.now(),
+                numero: f.numero.value,
+                serie: f.serie.value,
+                fecha: f.fecha.value,
+                cliente: facturaOrig.cliente,
+                facturaOriginal: { numero: facturaOrig.numero, serie: facturaOrig.serie, fecha: facturaOrig.fecha },
+                motivo: f.motivo.value,
+                lineas: [...APP.lineasTemp],
+                base,
+                igic: igicT,
+                total: base+igicT,
+                hashAnterior: facturaOrig.huella,
+                estado: 'Procesando'
+            };
+
+            rect.huella = hash({ cif: APP.empresa.cif, num: rect.serie+rect.numero, fecha: rect.fecha, total: rect.total, prev: rect.hashAnterior });
+            rect.firma = hash(rect.huella + APP.cert.serie);
+            rect.urlQR = `${window.location.href.split('?')[0]}?factura=${rect.id}`;
+            rect.qr = rect.urlQR;
+            rect.csv = 'CSV-RECT-' + Math.random().toString(36).slice(2,10).toUpperCase();
+
+            APP.lineasTemp.forEach(lin => {
+                const p = APP.productos.find(x => x.id === lin.producto.id);
+                if(p) p.stock += lin.cantidad;
+            });
+
+            APP.rectificativas.push(rect);
+            APP.lineasTemp = [];
+            cerrarModal();
+            alert('✅ Factura Rectificativa creada');
+
+            setTimeout(() => {
+                rect.estado = 'Validada AEAT';
+                render();
+            }, 1200);
+        }
+
+        function verFactura(id) { 
+            APP.vistaFactura = APP.facturas.find(f => f.id === id) || APP.rectificativas.find(r => r.id === id);
+            render(); 
+        }
+        function cerrarVistaFactura() { APP.vistaFactura = null; render(); }
+
+        function render() {
+            document.getElementById('app').innerHTML = renderHeader() + renderNav() + '<div class="max-w-7xl mx-auto p-6">' + (APP.tab === 'inicio' ? renderInicio() : renderContenido()) + '</div>' + (APP.modal ? renderModal() : '') + (APP.vistaFactura ? renderVistaFactura() : '');
+        }
+
+        function renderHeader() {
+            return `<div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 shadow-xl no-print">
+                <div class="max-w-7xl mx-auto">
+                    <h1 class="text-3xl font-bold">📊 Sistema de Facturación con VeriFactu</h1>
+                    <p class="text-sm mt-1">CIFP Zonzamas - Departamento de Administración y Gestión</p>
+                    <p class="text-xs mt-2 bg-yellow-500 text-yellow-900 inline-block px-3 py-1 rounded-full font-semibold">⚠️ SIMULADOR EDUCATIVO - SIN VALIDEZ FISCAL</p>
+                </div>
+            </div>`;
+        }
+
+        function renderNav() {
+            const tabs = [{id:'inicio',icon:'🏠',t:'Inicio'},{id:'empresa',icon:'🏢',t:'Empresa'},{id:'proveedores',icon:'🚚',t:'Proveedores'},{id:'compras',icon:'📥',t:'Facturas Compra'},{id:'almacen',icon:'📦',t:'Almacén'},{id:'clientes',icon:'👥',t:'Clientes'},{id:'albaranes',icon:'📋',t:'Albaranes'},{id:'facturas',icon:'💼',t:'Facturas'},{id:'rectificativas',icon:'🔄',t:'Rectificativas'}];
+            return `<div class="bg-white shadow-md no-print"><div class="max-w-7xl mx-auto flex overflow-x-auto">${tabs.map(t=>`<button onclick="cambiarTab('${t.id}')" class="px-4 py-3 font-semibold whitespace-nowrap border-b-4 ${APP.tab===t.id?'border-blue-600 text-blue-600 bg-blue-50':'border-transparent text-gray-600 hover:bg-gray-50'}"><span class="text-xl mr-2">${t.icon}</span>${t.t}</button>`).join('')}</div></div>`;
+        }
+
+        function renderInicio() {
+            return `<div>
+                <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                    <h2 class="text-3xl font-bold mb-6 text-center">👋 Bienvenido al Simulador</h2>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-6">
+                        <h3 class="font-bold text-blue-900 text-xl mb-4">📚 Flujo de Trabajo:</h3>
+                        <ol class="space-y-3 text-lg">
+                            <li><span class="font-bold text-blue-600 mr-3">1.</span><strong>Configurar Empresa</strong></li>
+                            <li><span class="font-bold text-blue-600 mr-3">2.</span><strong>Registrar Proveedores</strong></li>
+                            <li><span class="font-bold text-blue-600 mr-3">3.</span><strong>Factura de Compra</strong> → Crea almacén</li>
+                            <li><span class="font-bold text-blue-600 mr-3">4.</span><strong>Registrar Clientes</strong></li>
+                            <li><span class="font-bold text-blue-600 mr-3">5.</span><strong>Crear Albarán</strong></li>
+                            <li><span class="font-bold text-blue-600 mr-3">6.</span><strong>Emitir Factura</strong> → VeriFactu</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <button onclick="cambiarTab('empresa')" class="btn-card bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl p-6 text-white shadow-lg text-center">
+                        <div class="text-5xl font-bold mb-2">${APP.empresa ? '✓' : '○'}</div>
+                        <p class="text-sm font-semibold">Empresa</p>
+                        <p class="text-xs mt-2 opacity-80">${!APP.empresa ? '⚙️ Configurar' : '✅ Configurada'}</p>
+                    </button>
+                    <button onclick="cambiarTab('proveedores')" class="btn-card bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl p-6 text-white shadow-lg text-center">
+                        <div class="text-5xl font-bold mb-2">${APP.proveedores.length}</div>
+                        <p class="text-sm font-semibold">Proveedores</p>
+                        <p class="text-xs mt-2 opacity-80">➕ Añadir</p>
+                    </button>
+                    <button onclick="cambiarTab('almacen')" class="btn-card bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl p-6 text-white shadow-lg text-center">
+                        <div class="text-5xl font-bold mb-2">${APP.productos.length}</div>
+                        <p class="text-sm font-semibold">Productos</p>
+                        <p class="text-xs mt-2 opacity-80">📦 Ver</p>
+                    </button>
+                    <button onclick="cambiarTab('facturas')" class="btn-card bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl p-6 text-white shadow-lg text-center">
+                        <div class="text-5xl font-bold mb-2">${APP.facturas.length}</div>
+                        <p class="text-sm font-semibold">Facturas</p>
+                        <p class="text-xs mt-2 opacity-80">➕ Crear</p>
+                    </button>
+                </div>
+
+                ${APP.cert?`<div class="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <span class="text-3xl mr-3">🔐</span>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-emerald-900">Sistema VeriFactu Activado</h3>
+                            <p class="text-xs text-emerald-600 mt-1">Serie: ${APP.cert.serie}</p>
+                            <p class="text-xs text-red-600 mt-1 font-semibold">⚠️ CERTIFICADO EDUCATIVO</p>
+                        </div>
+                        <span class="text-3xl">✓</span>
+                    </div>
+                </div>`:''}
+            </div>`;
+        }
+
+        function renderContenido() {
+            if(APP.tab==='empresa') return !APP.empresa ? `<div class="text-center py-20"><button onclick="abrirModal('empresa')" class="btn-card bg-blue-600 hover:bg-blue-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">🏢</span>Configurar Empresa</button></div>` : `<div class="bg-white rounded-xl shadow-lg p-6"><h2 class="text-2xl font-bold mb-4">🏢 ${APP.empresa.nombre}</h2><div class="grid grid-cols-2 gap-4"><p><strong>CIF:</strong> ${APP.empresa.cif}</p><p><strong>Teléfono:</strong> ${APP.empresa.telefono}</p><p><strong>Email:</strong> ${APP.empresa.email}</p><p><strong>Dirección:</strong> ${APP.empresa.direccion}</p><p><strong>Ciudad:</strong> ${APP.empresa.ciudad}</p><p><strong>CP:</strong> ${APP.empresa.cp}</p></div></div>`;
+            
+            if(APP.tab==='proveedores') {
+                if(!APP.proveedores.length) {
+                    return `<div class="text-center py-20"><button onclick="abrirModal('proveedor')" class="btn-card bg-green-600 hover:bg-green-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">🚚</span>Nuevo Proveedor</button></div>`;
+                }
+                return `<div><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">🚚 Proveedores</h2><button onclick="abrirModal('proveedor')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">➕ Nuevo</button></div><div class="grid grid-cols-3 gap-4">${APP.proveedores.map(p=>`<div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"><h3 class="font-bold text-lg mb-2">🚚 ${p.nombre}</h3><p class="text-sm"><strong>CIF:</strong> ${p.cif}</p><p class="text-sm"><strong>Ciudad:</strong> ${p.ciudad}</p><p class="text-sm"><strong>Código:</strong> ${p.codigo}</p></div>`).join('')}</div></div>`;
+            }
+            
+            if(APP.tab==='compras') {
+                if(!APP.proveedores.length) {
+                    return `<div class="text-center py-20"><div class="text-red-600 text-lg mb-6">⚠️ Necesitas proveedores primero</div><button onclick="cambiarTab('proveedores')" class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-semibold">Ir a Proveedores</button></div>`;
+                }
+                if(!APP.facturasCompra.length) {
+                    return `<div class="text-center py-20"><button onclick="abrirModal('compra')" class="btn-card bg-green-600 hover:bg-green-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">📥</span>Nueva Factura Compra</button></div>`;
+                }
+                return `<div><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">📥 Facturas Compra</h2><button onclick="abrirModal('compra')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">➕ Nueva</button></div><div class="bg-white rounded-xl shadow-lg overflow-hidden"><table class="w-full"><thead class="bg-green-600 text-white"><tr><th class="text-left p-4">Número</th><th class="text-left p-4">Fecha</th><th class="text-left p-4">Proveedor</th><th class="text-right p-4">Total</th></tr></thead><tbody>${APP.facturasCompra.map(f=>`<tr class="border-b hover:bg-green-50"><td class="p-4 font-bold">${f.numero}</td><td class="p-4">${f.fecha}</td><td class="p-4">🚚 ${f.proveedor.nombre}</td><td class="p-4 text-right font-bold">${f.total.toFixed(2)}€</td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+            
+
+            if(APP.tab==='almacen') {
+                if(!APP.productos.length) {
+                    return `<div class="text-center py-20"><button onclick="cambiarTab('compras')" class="btn-card bg-orange-600 hover:bg-orange-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">📦</span>Almacén Vacío<br><span class="text-sm">Crea facturas de compra</span></button></div>`;
+                }
+                return `<div><h2 class="text-2xl font-bold mb-6">📦 Almacén</h2><div class="bg-white rounded-xl shadow-lg overflow-hidden"><table class="w-full"><thead class="bg-orange-600 text-white"><tr><th class="text-left p-3">Código</th><th class="text-left p-3">Producto</th><th class="text-right p-3">Stock</th><th class="text-right p-3">Stock Mín</th><th class="text-right p-3">P.Venta</th><th class="text-right p-3">IGIC</th></tr></thead><tbody>${APP.productos.map(p=>`<tr class="border-b hover:bg-orange-50"><td class="p-3 font-mono font-semibold">${p.codigo}</td><td class="p-3">📦 ${p.nombre}</td><td class="p-3 text-right"><span class="px-3 py-1 rounded-full text-xs font-bold ${p.stock<=p.stockMin?'bg-red-100 text-red-800':'bg-green-100 text-green-800'}">${p.stock}</span></td><td class="p-3 text-right">${p.stockMin}</td><td class="p-3 text-right">${p.precioVenta.toFixed(2)}€</td><td class="p-3 text-right">${p.igic}%</td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+            
+            if(APP.tab==='clientes') {
+                if(!APP.clientes.length) {
+                    return `<div class="text-center py-20"><button onclick="abrirModal('cliente')" class="btn-card bg-green-600 hover:bg-green-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">👥</span>Nuevo Cliente</button></div>`;
+                }
+                return `<div><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">👥 Clientes</h2><button onclick="abrirModal('cliente')" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">➕ Nuevo</button></div><div class="bg-white rounded-xl shadow-lg overflow-hidden"><table class="w-full"><thead class="bg-green-600 text-white"><tr><th class="text-left p-4">Código</th><th class="text-left p-4">Nombre</th><th class="text-left p-4">CIF</th><th class="text-center p-4">Desc.C%</th><th class="text-center p-4">Desc.V%</th><th class="text-center p-4">P.Pago%</th></tr></thead><tbody>${APP.clientes.map(c=>`<tr class="border-b hover:bg-green-50"><td class="p-4 font-mono">${c.codigo}</td><td class="p-4 font-semibold">👥 ${c.nombre}</td><td class="p-4">${c.cif}</td><td class="p-4 text-center">${c.descComercial}%</td><td class="p-4 text-center">${c.descVolumen}%</td><td class="p-4 text-center">${c.prontoPago}%</td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+            
+            if(APP.tab==='albaranes') {
+                if(!APP.clientes.length || !APP.productos.length) {
+                    return `<div class="text-center py-20"><div class="text-red-600 text-lg mb-6">⚠️ Necesitas clientes y productos</div></div>`;
+                }
+                if(!APP.albaranes.length) {
+                    return `<div class="text-center py-20"><button onclick="abrirModal('albaran')" class="btn-card bg-indigo-600 hover:bg-indigo-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">📋</span>Nuevo Albarán</button></div>`;
+                }
+                return `<div><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">📋 Albaranes</h2><button onclick="abrirModal('albaran')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold">➕ Nuevo</button></div><div class="bg-white rounded-xl shadow-lg overflow-hidden"><table class="w-full"><thead class="bg-indigo-600 text-white"><tr><th class="text-left p-4">Número</th><th class="text-left p-4">Fecha</th><th class="text-left p-4">Cliente</th><th class="text-center p-4">Estado</th></tr></thead><tbody>${APP.albaranes.map(a=>`<tr class="border-b hover:bg-indigo-50"><td class="p-4 font-bold">${a.numero}</td><td class="p-4">${a.fecha}</td><td class="p-4">👥 ${a.cliente.nombre}</td><td class="p-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${a.facturado?'bg-green-100 text-green-800':'bg-yellow-100 text-yellow-800'}">${a.facturado?'Facturado':'Pendiente'}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+            
+            if(APP.tab==='facturas') {
+                if(!APP.clientes.length || !APP.productos.length) {
+                    return `<div class="text-center py-20"><div class="text-red-600 text-lg mb-6">⚠️ Necesitas clientes y productos</div></div>`;
+                }
+                if(!APP.facturas.length) {
+                    return `<div class="text-center py-20"><button onclick="abrirModal('factura')" class="btn-card bg-orange-600 hover:bg-orange-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">💼</span>Nueva Factura</button></div>`;
+                }
+                return `<div><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">💼 Facturas</h2><button onclick="abrirModal('factura')" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold">➕ Nueva</button></div><div class="bg-white rounded-xl shadow-lg overflow-hidden"><table class="w-full"><thead class="bg-orange-600 text-white"><tr><th class="text-left p-4">Número</th><th class="text-left p-4">Fecha</th><th class="text-left p-4">Cliente</th><th class="text-right p-4">Total</th><th class="text-center p-4">Estado</th><th class="text-center p-4">Ver</th></tr></thead><tbody>${APP.facturas.map(f=>`<tr class="border-b hover:bg-orange-50"><td class="p-4 font-bold">${f.serie}-${f.numero}</td><td class="p-4">${f.fecha}</td><td class="p-4">👥 ${f.cliente.nombre}</td><td class="p-4 text-right font-bold">${f.total.toFixed(2)}€</td><td class="p-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${f.estado==='Validada AEAT'?'bg-green-100 text-green-800':'bg-yellow-100 text-yellow-800'}">${f.estado}</span></td><td class="p-4 text-center"><button onclick="verFactura(${f.id})" class="text-blue-600 font-bold">👁️ Ver</button></td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+
+            if(APP.tab==='rectificativas') {
+                if(!APP.facturas.length) {
+                    return `<div class="text-center py-20"><div class="text-red-600 text-lg mb-6">⚠️ Necesitas facturas para crear rectificativas</div></div>`;
+                }
+                if(!APP.rectificativas.length) {
+                    return `<div class="text-center py-20"><button onclick="abrirModal('rectificativa')" class="btn-card bg-red-600 hover:bg-red-700 text-white px-12 py-8 rounded-xl text-2xl font-bold shadow-lg inline-block"><span class="text-6xl block mb-4">🔄</span>Nueva Rectificativa</button></div>`;
+                }
+                return `<div><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">🔄 Facturas Rectificativas</h2><button onclick="abrirModal('rectificativa')" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold">➕ Nueva</button></div><div class="bg-white rounded-xl shadow-lg overflow-hidden"><table class="w-full"><thead class="bg-red-600 text-white"><tr><th class="text-left p-4">Número</th><th class="text-left p-4">Fecha</th><th class="text-left p-4">Factura Original</th><th class="text-left p-4">Motivo</th><th class="text-right p-4">Total</th><th class="text-center p-4">Estado</th><th class="text-center p-4">Ver</th></tr></thead><tbody>${APP.rectificativas.map(r=>`<tr class="border-b hover:bg-red-50"><td class="p-4 font-bold text-red-600">${r.serie}-${r.numero}</td><td class="p-4">${r.fecha}</td><td class="p-4 text-sm">${r.facturaOriginal.serie}-${r.facturaOriginal.numero}</td><td class="p-4 text-sm">${r.motivo}</td><td class="p-4 text-right font-bold text-red-600">-${r.total.toFixed(2)}€</td><td class="p-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${r.estado==='Validada AEAT'?'bg-green-100 text-green-800':'bg-yellow-100 text-yellow-800'}">${r.estado}</span></td><td class="p-4 text-center"><button onclick="verFactura(${r.id})" class="text-blue-600 font-bold">👁️ Ver</button></td></tr>`).join('')}</tbody></table></div></div>`;
+            }
+
+            return '';
+        }
+
+        function renderModal() {
+            const m = APP.modal;
+            if(m==='empresa') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4">🏢 Empresa</h2><form onsubmit="guardarEmpresa(event)"><div class="space-y-3"><div><label class="block text-sm font-semibold mb-1">Nombre *</label><input name="nombre" placeholder="Nombre de la empresa" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">CIF *</label><input name="cif" placeholder="CIF/NIF" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Dirección</label><input name="direccion" placeholder="Dirección completa" class="w-full p-2 border rounded"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-sm font-semibold mb-1">Ciudad</label><input name="ciudad" placeholder="Ciudad" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">CP</label><input name="cp" placeholder="Código Postal" class="w-full p-2 border rounded"></div></div><div><label class="block text-sm font-semibold mb-1">Provincia</label><input name="provincia" placeholder="Provincia" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Teléfono</label><input name="telefono" placeholder="Teléfono de contacto" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Email</label><input name="email" type="email" placeholder="correo@empresa.com" class="w-full p-2 border rounded"></div></div><div class="flex gap-3 mt-6"><button type="button" onclick="cerrarModal()" class="border px-4 py-2 rounded flex-1">Cancelar</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded flex-1">Guardar Empresa</button></div></form></div></div>`;
+            
+            if(m==='proveedor') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4">🚚 Proveedor</h2><form onsubmit="guardarProveedor(event)"><div class="space-y-3"><div><label class="block text-sm font-semibold mb-1">Nombre *</label><input name="nombre" placeholder="Nombre del proveedor" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">CIF *</label><input name="cif" placeholder="CIF/NIF" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Dirección</label><input name="direccion" placeholder="Dirección completa" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Ciudad</label><input name="ciudad" placeholder="Ciudad" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Teléfono</label><input name="telefono" placeholder="Teléfono de contacto" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Email</label><input name="email" type="email" placeholder="correo@proveedor.com" class="w-full p-2 border rounded"></div></div><div class="flex gap-3 mt-6"><button type="button" onclick="cerrarModal()" class="border px-4 py-2 rounded flex-1">Cancelar</button><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded flex-1">Guardar Proveedor</button></div></form></div></div>`;
+            
+            if(m==='cliente') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4">👥 Cliente</h2><form onsubmit="guardarCliente(event)"><div class="space-y-3"><div><label class="block text-sm font-semibold mb-1">Nombre *</label><input name="nombre" placeholder="Nombre completo" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">CIF *</label><input name="cif" placeholder="CIF/NIF" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Dirección</label><input name="direccion" placeholder="Dirección completa" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Ciudad</label><input name="ciudad" placeholder="Ciudad" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Teléfono</label><input name="telefono" placeholder="Teléfono de contacto" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Email</label><input name="email" type="email" placeholder="correo@ejemplo.com" class="w-full p-2 border rounded"></div><hr class="my-4"><div class="bg-blue-50 p-4 rounded"><h3 class="font-bold text-blue-900 mb-3">💰 Descuentos Aplicables</h3><div class="space-y-3"><div><label class="block text-sm font-semibold mb-1">Descuento Comercial (%)</label><input name="descComercial" type="number" placeholder="0" step="0.1" value="0" class="w-full p-2 border rounded"><p class="text-xs text-gray-600">Por acuerdo comercial</p></div><div><label class="block text-sm font-semibold mb-1">Descuento por Volumen (%)</label><input name="descVolumen" type="number" placeholder="0" step="0.1" value="0" class="w-full p-2 border rounded"><p class="text-xs text-gray-600">Por cantidad de compra</p></div><div><label class="block text-sm font-semibold mb-1">Pronto Pago (%)</label><input name="prontoPago" type="number" placeholder="0" step="0.1" value="0" class="w-full p-2 border rounded"><p class="text-xs text-gray-600">Por pago anticipado</p></div></div></div></div><div class="flex gap-3 mt-6"><button type="button" onclick="cerrarModal()" class="border px-4 py-2 rounded flex-1">Cancelar</button><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded flex-1">Guardar Cliente</button></div></form></div></div>`;
+            
+            if(m==='compra') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4">📥 Factura Compra</h2><form onsubmit="guardarFacturaCompra(event)"><div class="grid grid-cols-3 gap-4 mb-4"><div><label class="block text-sm font-semibold mb-1">Número *</label><input name="numero" placeholder="OC-2025-0001" required class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Fecha *</label><input name="fecha" type="date" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2 border rounded"></div><div><label class="block text-sm font-semibold mb-1">Proveedor *</label><select name="proveedor" required class="w-full p-2 border rounded"><option value="">Seleccionar proveedor...</option>${APP.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('')}</select></div></div><div class="border rounded p-4 bg-gray-50 mb-4"><h3 class="font-bold mb-3">📦 Productos</h3><div class="grid grid-cols-9 gap-2 text-sm mb-3"><input placeholder="Código" id="lineaCodigo" class="p-2 border rounded"><input placeholder="Nombre" id="lineaNombre" class="col-span-2 p-2 border rounded"><input placeholder="Cant" id="lineaCantidad" type="number" value="1" class="p-2 border rounded"><input placeholder="P.Compra" id="lineaPrecioCompra" type="number" step="0.01" class="p-2 border rounded"><input placeholder="P.Venta" id="lineaPrecioVenta" type="number" step="0.01" class="p-2 border rounded"><select id="lineaIgic" class="p-2 border rounded"><option value="7">7%</option><option value="0">0%</option><option value="3">3%</option><option value="9.5">9.5%</option></select><input placeholder="Stock Min" id="lineaStockMin" type="number" value="5" class="p-2 border rounded"></div><button type="button" onclick="addLineaCompra()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded text-sm font-semibold">➕ Añadir Producto</button></div>${!APP.lineasTemp.length?`<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4"><p class="text-yellow-800 font-semibold">⚠️ Debes añadir al menos un producto</p></div>`:`<table class="w-full text-sm mb-4"><thead class="bg-gray-100"><tr><th class="text-left p-2">Código</th><th class="text-left p-2">Nombre</th><th class="text-right p-2">Cant</th><th class="text-right p-2">P.Compra</th><th class="text-right p-2">P.Venta</th><th class="text-center p-2">IGIC</th><th class="text-center p-2">Stock Min</th><th></th></tr></thead><tbody>${APP.lineasTemp.map((l,i)=>`<tr class="border-b"><td class="p-2 font-mono">${l.codigo}</td><td class="p-2">${l.nombre}</td><td class="p-2 text-right">${l.cantidad}</td><td class="p-2 text-right">${l.precioCompra.toFixed(2)}€</td><td class="p-2 text-right">${l.precioVenta.toFixed(2)}€</td><td class="p-2 text-center">${l.igic}%</td><td class="p-2 text-center">${l.stockMin}</td><td class="p-2"><button type="button" onclick="delLineaCompra(${i})" class="text-red-600 hover:text-red-800">🗑️ Eliminar</button></td></tr>`).join('')}</tbody></table>`}<div class="flex gap-3"><button type="button" onclick="cerrarModal()" class="border px-6 py-2 rounded flex-1">Cancelar</button><button type="submit" ${!APP.lineasTemp.length?'disabled':''}class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded flex-1 font-semibold ${!APP.lineasTemp.length?'opacity-50 cursor-not-allowed':''}">✅ Guardar Factura</button></div></form></div></div>`;
+            
+            if(m==='albaran') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4">📋 Albarán</h2><form onsubmit="guardarAlbaran(event)"><div class="grid grid-cols-2 gap-4 mb-4"><input name="fecha" type="date" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2 border rounded"><select name="cliente" required class="w-full p-2 border rounded"><option value="">Cliente...</option>${APP.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('')}</select></div><div class="border rounded p-4 bg-gray-50 mb-4"><h3 class="font-bold mb-3">📦 Productos</h3><div class="flex gap-2"><select id="selProdAlbaran" class="flex-1 p-2 border rounded"><option value="">Producto...</option>${APP.productos.filter(p=>p.stock>0).map(p=>`<option value="${p.id}">${p.nombre} (Stock: ${p.stock})</option>`).join('')}</select><input id="cantAlbaran" type="number" min="1" value="1" class="w-20 p-2 border rounded"><button type="button" onclick="addLineaAlbaran()" class="bg-indigo-600 text-white px-4 py-2 rounded">➕</button></div></div>${APP.lineasTemp.length?`<table class="w-full text-sm mb-4"><thead class="bg-gray-100"><tr><th class="text-left p-2">Producto</th><th class="text-right p-2">Cant</th><th class="text-right p-2">Precio</th><th></th></tr></thead><tbody>${APP.lineasTemp.map(l=>`<tr class="border-b"><td class="p-2">${l.producto.nombre}</td><td class="p-2 text-right">${l.cantidad}</td><td class="p-2 text-right">${l.producto.precioVenta.toFixed(2)}€</td><td class="p-2"><button type="button" onclick="delLineaAlbaran(${l.id})" class="text-red-600">🗑️</button></td></tr>`).join('')}</tbody></table>`:''}<div class="flex gap-3"><button type="button" onclick="cerrarModal()" class="border px-4 py-2 rounded flex-1">Cancelar</button><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded flex-1">Guardar</button></div></form></div></div>`;
+            
+            if(m==='factura') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4">💼 Factura</h2><form onsubmit="guardarFactura(event)"><div class="grid grid-cols-4 gap-4 mb-4"><input name="serie" value="2025-A" class="w-full p-2 border rounded"><input name="numero" type="number" required value="${APP.facturas.length+1}" class="w-full p-2 border rounded"><input name="fecha" type="date" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2 border rounded"><select name="cliente" required class="w-full p-2 border rounded"><option value="">Cliente...</option>${APP.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('')}</select></div><div class="border rounded p-4 bg-gray-50 mb-4"><h3 class="font-bold mb-3">📦 Productos</h3><div class="flex gap-2"><select id="selProdFactura" class="flex-1 p-2 border rounded"><option value="">Producto...</option>${APP.productos.filter(p=>p.stock>0).map(p=>`<option value="${p.id}">${p.nombre} (Stock: ${p.stock})</option>`).join('')}</select><input id="cantFactura" type="number" min="1" value="1" class="w-20 p-2 border rounded"><button type="button" onclick="addLineaFactura()" class="bg-orange-600 text-white px-4 py-2 rounded">➕</button></div></div>${APP.lineasTemp.length?`<table class="w-full text-sm mb-4"><thead class="bg-gray-100"><tr><th class="text-left p-2">Producto</th><th class="text-right p-2">Cant</th><th class="text-right p-2">Precio</th><th class="text-right p-2">IGIC</th><th class="text-right p-2">Total</th><th></th></tr></thead><tbody>${APP.lineasTemp.map(l=>`<tr class="border-b"><td class="p-2">${l.producto.nombre}</td><td class="p-2 text-right">${l.cantidad}</td><td class="p-2 text-right">${l.precio.toFixed(2)}€</td><td class="p-2 text-right">${l.igic}%</td><td class="p-2 text-right font-bold">${(l.precio*l.cantidad*(1+l.igic/100)).toFixed(2)}€</td><td class="p-2"><button type="button" onclick="delLineaFactura(${l.id})" class="text-red-600">🗑️</button></td></tr>`).join('')}</tbody></table>`:''}<div class="flex gap-3"><button type="button" onclick="cerrarModal()" class="border px-4 py-2 rounded flex-1">Cancelar</button><button type="submit" class="bg-orange-600 text-white px-4 py-2 rounded flex-1">Crear</button></div></form></div></div>`;
+            
+            if(m==='rectificativa') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto"><h2 class="text-2xl font-bold mb-4 text-red-600">🔄 Factura Rectificativa</h2><form onsubmit="guardarRectificativa(event)"><div class="grid grid-cols-4 gap-4 mb-4"><input name="serie" value="2025-R" class="w-full p-2 border rounded bg-red-50"><input name="numero" type="number" required value="${APP.rectificativas.length+1}" class="w-full p-2 border rounded"><input name="fecha" type="date" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2 border rounded"><select name="facturaOriginal" required class="w-full p-2 border rounded"><option value="">Factura a Rectificar...</option>${APP.facturas.map(f=>`<option value="${f.id}">${f.serie}-${f.numero} (${f.cliente.nombre})</option>`).join('')}</select></div><div class="border rounded p-4 bg-red-50 mb-4"><h3 class="font-bold mb-3 text-red-700">📝 Motivo de Rectificación</h3><select name="motivo" required class="w-full p-2 border rounded"><option value="">Selecciona motivo...</option><option value="Devolución total">Devolución total</option><option value="Devolución parcial">Devolución parcial</option><option value="Error en cantidad">Error en cantidad</option><option value="Error en precio">Error en precio</option><option value="Descuento posterior">Descuento posterior</option><option value="Error administrativo">Error administrativo</option></select></div><div class="border rounded p-4 bg-gray-50 mb-4"><h3 class="font-bold mb-3">📦 Líneas de Rectificación (valores negativos)</h3><div class="flex gap-2"><select id="selProdRect" class="flex-1 p-2 border rounded"><option value="">Producto...</option>${APP.productos.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('')}</select><input id="cantRect" type="number" min="1" value="1" class="w-20 p-2 border rounded"><button type="button" onclick="addLineaRectificativa()" class="bg-red-600 text-white px-4 py-2 rounded">➕</button></div></div>${APP.lineasTemp.length?`<table class="w-full text-sm mb-4"><thead class="bg-gray-100"><tr><th class="text-left p-2">Producto</th><th class="text-right p-2">Cant</th><th class="text-right p-2">Precio</th><th class="text-right p-2">IGIC</th><th class="text-right p-2">Total</th><th></th></tr></thead><tbody>${APP.lineasTemp.map(l=>`<tr class="border-b bg-red-50"><td class="p-2">${l.producto.nombre}</td><td class="p-2 text-right text-red-600">-${l.cantidad}</td><td class="p-2 text-right">${l.precio.toFixed(2)}€</td><td class="p-2 text-right">${l.igic}%</td><td class="p-2 text-right font-bold text-red-600">-${(l.precio*l.cantidad*(1+l.igic/100)).toFixed(2)}€</td><td class="p-2"><button type="button" onclick="delLineaFactura(${l.id})" class="text-red-600">🗑️</button></td></tr>`).join('')}</tbody></table>`:''}<div class="flex gap-3"><button type="button" onclick="cerrarModal()" class="border px-4 py-2 rounded flex-1">Cancelar</button><button type="submit" class="bg-red-600 text-white px-4 py-2 rounded flex-1">Crear Rectificativa</button></div></form></div></div>`;
+            
+            
+            return '';
+        }
+
+        function renderVistaFactura() {
+            const f = APP.vistaFactura;
+            const qrId = 'qr_' + f.id;
+            const barcodeId = 'barcode_' + f.id;
+            
+            // Detectar si viene desde QR
+            const esDesdeQR = window.location.search.includes('factura=');
+            
+            if(esDesdeQR) {
+                setTimeout(() => {
+                    const qrElement = document.getElementById(qrId);
+                    if(qrElement && qrElement.innerHTML === '') {
+                        new QRCode(qrElement, {
+                            text: f.urlQR,
+                            width: 150,
+                            height: 150,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                }, 100);
+                
+                return `<div class="min-h-screen bg-gradient-to-b from-blue-900 to-blue-800 p-8">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="text-center mb-8 text-white">
+                            <p class="text-3xl font-bold">🇪🇸 Agencia Tributaria</p>
+                            <p class="text-sm mt-2">Verificación de Facturas - VeriFactu</p>
+                        </div>
+                        
+                        <div class="bg-green-500 rounded-lg p-6 mb-6 text-white">
+                            <div class="flex items-center mb-3">
+                                <svg class="w-8 h-8 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                <h2 class="text-3xl font-bold">✓ Factura Válida</h2>
+                            </div>
+                            <p class="text-sm">La factura ha sido verificada correctamente en los registros de la Agencia Tributaria</p>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-8 mb-6 text-gray-900 shadow-xl">
+                            <h3 class="text-2xl font-bold mb-6 border-b-2 pb-3">📋 Datos de la Factura</h3>
+                            
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <p class="text-gray-600 font-bold text-sm mb-1">NIF Expedidor</p>
+                                    <p class="text-2xl font-bold text-blue-600">${APP.empresa ? APP.empresa.cif : 'XXXXXXXX'}</p>
+                                    <p class="text-xs text-gray-500 mt-1">(Quien emite la factura)</p>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <p class="text-gray-600 font-bold text-sm mb-1">NIF Receptor</p>
+                                    <p class="text-2xl font-bold text-green-600">${f.cliente.cif}</p>
+                                    <p class="text-xs text-gray-500 mt-1">(Quien recibe la factura)</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div class="border-l-4 border-orange-500 pl-4">
+                                    <p class="text-gray-600 font-bold text-sm">Serie de Factura</p>
+                                    <p class="text-xl font-bold text-orange-600">${f.serie}</p>
+                                </div>
+                                <div class="border-l-4 border-purple-500 pl-4">
+                                    <p class="text-gray-600 font-bold text-sm">Número de Factura</p>
+                                    <p class="text-xl font-bold text-purple-600">${String(f.numero).padStart(8,'0')}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div class="border-l-4 border-red-500 pl-4">
+                                    <p class="text-gray-600 font-bold text-sm">Fecha de Expedición</p>
+                                    <p class="text-lg font-bold text-red-600">${f.fecha}</p>
+                                </div>
+                                <div class="border-l-4 border-emerald-500 pl-4">
+                                    <p class="text-gray-600 font-bold text-sm">Importe Total</p>
+                                    <p class="text-lg font-bold text-emerald-600">${f.total.toFixed(2)}€</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-gray-600 font-bold text-sm mb-2">Razón Social Expedidor</p>
+                                    <p class="text-sm bg-gray-50 p-2 rounded">${APP.empresa ? APP.empresa.nombre : 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600 font-bold text-sm mb-2">Razón Social Receptor</p>
+                                    <p class="text-sm bg-gray-50 p-2 rounded">${f.cliente.nombre}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-6 mb-6 shadow-lg">
+                            <h3 class="text-xl font-bold mb-4 border-b-2 pb-2">🔐 Información de Seguridad VeriFactu</h3>
+                            
+                            <div class="mb-4">
+                                <p class="text-gray-600 font-bold text-sm mb-2">🔑 Huella Digital (Hash SHA-256)</p>
+                                <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs break-all border border-gray-700">
+                                    ${f.huella}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">Esta huella digital es única e imposible de falsificar. Si se cambia cualquier dato de la factura, la huella será diferente.</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-gray-600 font-bold text-sm mb-2">📍 URL de Verificación AEAT</p>
+                                <div class="bg-gray-100 p-3 rounded break-all border border-gray-300">
+                                    <p class="text-xs font-mono text-blue-600">${f.urlQR}</p>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">Esta URL permite verificar la factura directamente en los servidores de la Agencia Tributaria</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-6 mb-6 text-center">
+                            <p class="text-sm font-bold mb-4">📱 Código QR VeriFactu</p>
+                            <div id="${qrId}" class="flex justify-center mb-4 bg-gray-50 p-4 rounded-lg inline-block mx-auto" onclick="verFactura(${f.id})" style="cursor: pointer;"></div>
+                            <p class="text-xs font-mono text-gray-600">CSV: ${f.csv}</p>
+                            <p class="text-xs text-gray-500 mt-3 font-bold">👆 Haz click en el QR para abrir página Hacienda</p>
+                        </div>
+                        
+                        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded">
+                            <p class="text-yellow-800 font-bold text-sm mb-2">💡 ¿Qué es la Huella Digital?</p>
+                            <p class="text-yellow-700 text-xs">Es un código único generado a partir de los datos de la factura usando criptografía avanzada. Si alguien intenta modificar la factura, la huella será completamente diferente y la factura se considerará inválida.</p>
+                        </div>
+                        
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                            <p class="text-red-800 text-xs font-bold mb-1">⚠️ DOCUMENTO EDUCATIVO - CIFP ZONZAMAS</p>
+                            <p class="text-red-700 text-xs">Esta es una simulación educativa del sistema VeriFactu según RD 1007/2023. No tiene validez fiscal real.</p>
+                        </div>
+                        
+                        <div class="text-center mt-8">
+                            <p class="text-white text-xs">Agencia Tributaria - Ministerio de Hacienda y Función Pública</p>
+                            <p class="text-white text-xs mt-2">www.aeat.gob.es</p>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            
+            setTimeout(() => {
+                const qrElement = document.getElementById(qrId);
+                if(qrElement && qrElement.innerHTML === '') {
+                    new QRCode(qrElement, {
+                        text: f.urlQR,
+                        width: 120,
+                        height: 120,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+                const barcodeElement = document.getElementById(barcodeId);
+                if(barcodeElement && !barcodeElement.querySelector('svg')) {
+                    JsBarcode("#" + barcodeId, f.serie + String(f.numero).padStart(8,'0'), {
+                        format: "CODE128",
+                        width: 2,
+                        height: 50,
+                        displayValue: true,
+                        fontSize: 12,
+                        margin: 5
+                    });
+                }
+            }, 100);
+            return `<div class="w-full bg-white"><div class="max-w-4xl mx-auto p-8"><div class="border-2 rounded p-8 mb-6"><div class="flex justify-between mb-8"><div><h3 class="text-3xl font-bold">📊 ${APP.empresa ? APP.empresa.nombre : 'Empresa'}</h3><p class="text-sm mt-2">CIF: ${APP.empresa ? APP.empresa.cif : 'N/A'}</p><p class="text-sm">${APP.empresa ? APP.empresa.direccion : ''}</p></div><div class="text-right"><div class="text-5xl font-bold text-blue-600">FACTURA</div><p class="text-2xl font-bold mt-2">${f.serie}-${String(f.numero).padStart(8,'0')}</p><p class="text-lg mt-2">${f.fecha}</p><p class="text-xs bg-green-100 px-3 py-1 inline-block mt-2">${f.csv}</p></div></div><div class="border-y py-6 my-6"><h4 class="text-lg font-bold mb-3">👥 Cliente Facturado:</h4><p class="text-xl font-bold">${f.cliente.nombre}</p><p class="text-sm mt-1">CIF: ${f.cliente.cif}</p><p class="text-sm">${f.cliente.direccion || ''}</p></div><table class="w-full my-6"><thead class="bg-gray-200"><tr><th class="text-left p-3 font-bold">Producto</th><th class="text-center p-3 font-bold">Cant</th><th class="text-right p-3 font-bold">Precio</th><th class="text-right p-3 font-bold">IGIC</th><th class="text-right p-3 font-bold">Total</th></tr></thead><tbody>${f.lineas.map(l=>{const desc=(f.cliente.descComercial+f.cliente.descVolumen+f.cliente.prontoPago)/100;const pf=l.precio*(1-desc);const sub=pf*l.cantidad;const ig=sub*(l.igic/100);return`<tr class="border-b"><td class="p-3">${l.producto.nombre}</td><td class="p-3 text-center">${l.cantidad}</td><td class="p-3 text-right">${l.precio.toFixed(2)}€</td><td class="p-3 text-right">${l.igic}%</td><td class="p-3 text-right font-bold text-lg">${(sub+ig).toFixed(2)}€</td></tr>`;}).join('')}</tbody></table><div class="flex justify-between gap-8 my-8"><div class="flex-1"></div><div class="w-80 bg-gray-50 p-6 rounded border-2"><div class="text-right"><p class="text-sm mb-3"><span class="font-bold">Base Imponible:</span> <span class="text-lg">${f.base.toFixed(2)}€</span></p><p class="text-sm mb-3"><span class="font-bold">IGIC (${(f.igic/f.base*100).toFixed(1)}%):</span> <span class="text-lg">${f.igic.toFixed(2)}€</span></p><p class="text-lg border-t-2 pt-3"><span class="font-bold">TOTAL:</span> <span class="text-3xl text-blue-600 font-bold">${f.total.toFixed(2)}€</span></p></div></div></div><div class="flex gap-8 my-8 justify-center"><div class="text-center"><p class="text-xs font-bold mb-3">🔐 CÓDIGO QR VERIFACTU</p><div id="${qrId}" class="flex justify-center"></div><p class="text-xs font-mono mt-2">${f.csv}</p></div><div class="text-center"><p class="text-xs font-bold mb-3">📊 CÓDIGO DE FACTURA</p><svg id="${barcodeId}"></svg></div></div><div class="border-t-2 mt-8 pt-8"><div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4"><p class="text-red-800 font-bold">⚠️ DOCUMENTO EDUCATIVO - CIFP ZONZAMAS</p><p class="text-red-700 text-sm">Sistema conforme al RD 1007/2023 - Simulación VeriFactu</p><p class="text-red-700 text-sm font-bold">SOLO PARA FINES FORMATIVOS - SIN VALIDEZ FISCAL</p></div><p class="text-xs text-gray-600 mt-4"><strong>Firma Electrónica:</strong> ${f.huella}</p><p class="text-xs text-gray-600"><strong>Referencia VeriFactu:</strong> ${f.qr}</p></div></div></div>`;
+        }
+
+        render();
+    </script>
+</body>
+</html>
